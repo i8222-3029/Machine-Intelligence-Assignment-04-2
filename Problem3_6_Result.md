@@ -1,130 +1,56 @@
-# Problem 3.6 — Propositional vs. First-Order Expressiveness
+# Problem 3.2: Propositional vs. First-Order Expressiveness
 
 ## Part A. Propositional Encoding Cost
 
-Let the warehouse be an \(n \times n\) grid, and let \(N=n^2\) be the number of locations.
+In the propositional encoding (as in Q9 and Q17), adjacency is not encoded as a separate relation—it is embedded in the structure of each biconditional. We count the sentences that explicitly reference which squares neighbor which.
 
-### 1) Adjacency relation
-Using 4-neighborhood adjacency (up, down, left, right), the number of undirected adjacent pairs is
-\[
-E = 2n(n-1)
-\]
-because there are \(n(n-1)\) horizontal pairs and \(n(n-1)\) vertical pairs.
+1. **Adjacency**: In propositional logic there is no binary predicate, so adjacency is implicit. If we wanted to state it explicitly (e.g., using propositions \(A_{(i,j),(i',j')}\)), we would need one assertion for every ordered pair of locations: \((n^2)^2 = n^4\) sentences (true for adjacent pairs, false otherwise). For \(n = 100\): \(10^8\) sentences.
 
-So, if adjacency facts are listed propositionally, the number of sentences is
-\[
-2n(n-1)=O(n^2).
-\]
+2. **Creaking rule**: One biconditional per square, each listing adjacent \(D\) variables in the disjunction. There are \(n^2\) squares, so \(n^2\) sentences. For \(n = 100\): 10,000 sentences.
 
-### 2) Creaking rule
-For each location \(l\):
-\[
-C_l \leftrightarrow \bigvee_{k \in Adj(l)} D_k
-\]
-One sentence per location, so total:
-\[
-n^2=O(n^2).
-\]
+3. **Safety rule**: One biconditional per square: \(S_{i,j} \leftrightarrow \neg D_{i,j} \land \neg F_{i,j}\). Again \(n^2\) sentences. For \(n = 100\): 10,000 sentences.
 
-### 3) Safety rule
-For each location \(l\):
-\[
-S_l \leftrightarrow (\neg D_l \land \neg F_l)
-\]
-Again one sentence per location, so total:
-\[
-n^2=O(n^2).
-\]
-
-### Total number of propositional sentences
-\[
-2n(n-1)+n^2+n^2 = 4n^2-2n.
-\]
-
-For \(n=100\):
-- Adjacency: \(2\cdot100\cdot99=19{,}800\)
-- Creaking: \(10{,}000\)
-- Safety: \(10{,}000\)
-- Total: \(39{,}800\) sentences
-
-Note: If one also explicitly encodes all non-adjacent pairs as false, complexity can rise toward \(O(n^4)\).
-
----
+Including the rumbling rule (another \(n^2\)), the physics encoding requires \(3n^2\) biconditionals. For \(n = 100\): 30,000 propositional sentences for physics alone.
 
 ## Part B. FOL Comparison
 
-Use predicates:
-- \(Adj(x,y)\): \(x\) and \(y\) are adjacent
-- \(Damaged(x)\), \(Creak(x)\), \(Forklift(x)\), \(Safe(x)\)
+In first-order logic, the three physics rules each require a single quantified sentence:
 
-FOL rules:
+1. \(\forall L\; Creaking(L) \leftrightarrow \exists L'\; Adjacent(L,L') \land Damaged(L')\)
+2. \(\forall L\; Rumbling(L) \leftrightarrow \exists L'\; Adjacent(L,L') \land Forklift(L')\)
+3. \(\forall L\; Safe(L) \leftrightarrow \neg Damaged(L) \land \neg Forklift(L)\)
 
-1. Adjacency definition (coordinate-based schema)
-\[
-\forall x\forall y\big(Adj(x,y) \leftrightarrow \text{(x and y differ by one grid step)}\big)
-\]
-
-2. Creaking rule
-\[
-\forall l\big(Creak(l) \leftrightarrow \exists m(Adj(m,l)\land Damaged(m))\big)
-\]
-
-3. Safety rule
-\[
-\forall l\big(Safe(l) \leftrightarrow (\neg Damaged(l)\land \neg Forklift(l))\big)
-\]
-
-The key point: the number of FOL sentences is constant with respect to \(n\) (roughly 3 core rules, plus background axioms if needed).
-
----
+3 sentences encode the physics for any grid size. Structural facts still scale: closed-world adjacency requires \(O(n^4)\) ground assertions (one per ordered pair of locations, stating adjacent or not), and domain closure adds \(O(n^2)\) terms. But the physics rules themselves—the part that grows as \(3n^2\) in the propositional encoding—are constant in FOL.
 
 ## Part C. Translation Challenge
 
-Statement: “There is exactly one damaged floor section in the entire warehouse.”
+FOL: The statement “there is exactly one damaged floor section” is concise:
 
-### FOL form
 \[
-\exists x\Big(Damaged(x)\land \forall y(Damaged(y)\rightarrow y=x)\Big)
+\exists L\; Damaged(L) \land \forall L'\; (Damaged(L') \rightarrow L' = L)
 \]
-(or equivalently \(\exists!x\,Damaged(x)\)).
 
-### Can this be expressed in propositional logic?
-- **Yes**, for a fixed finite grid size (e.g., \(3\times3\)).
-- **No**, as one size-independent schema over arbitrary domains, because propositional logic has no quantifiers.
+Propositional logic for \(3 \times 3\): With 9 damage variables \(D_{1,1}, D_{2,1}, \ldots, D_{3,3}\), we need:
 
-### Propositional encoding for a \(3\times3\) grid
-Let \(D_1,\dots,D_9\) denote “cell \(i\) is damaged.” Then:
+- **At-least-one**: \(D_{1,1} \lor D_{2,1} \lor D_{3,1} \lor D_{1,2} \lor D_{2,2} \lor D_{3,2} \lor D_{1,3} \lor D_{2,3} \lor D_{3,3}\) (1 clause)
+- **At-most-one**: For every pair of distinct variables, assert that they are not both true: \(\neg D_{i,j} \lor \neg D_{k,\ell}\). There are \(\binom{9}{2} = 36\) such clauses
+
+Total: \(1 + 36 = 37\) clauses for \(3 \times 3\).
+
+Scaling: For an \(n \times n\) grid with \(n^2\) damage variables, the at-most-one constraint requires
+
 \[
-(D_1\vee\cdots\vee D_9)\land\bigwedge_{i<j}\neg(D_i\land D_j)
+\binom{n^2}{2} = \frac{n^2(n^2-1)}{2}
 \]
-- At least one damaged cell: 1 clause
-- At most one damaged cell: \(\binom{9}{2}=36\) clauses
-- Total: 37 clauses/sentences
 
-For general \(n\times n\), \(N=n^2\):
-\[
-1+\binom{N}{2}=1+\frac{N(N-1)}{2}=1+\frac{n^2(n^2-1)}{2},
-\]
-which scales as \(O(n^4)\).
+pairwise exclusion clauses, which is \(O(n^4)\). For \(n = 100\): \(\binom{10,000}{2} = 49,995,000\) clauses. The FOL version remains 1 sentence regardless of \(n\).
 
----
+So yes, the statement can be expressed in propositional logic, but the encoding cost grows as \(O(n^4)\)—a dramatic illustration of the expressiveness gap.
 
-## Part D. Practical Implications (100×100, 10,000 locations)
+## Part D. Practical Implications
 
-1. **Is propositional encoding practical at this scale?**
-   - For local rules (adjacency, creaking, safety), it can still be practical.
-   - For global cardinality constraints (e.g., exactly one), naive encodings become very large and costly.
+1. **Propositional at scale**: The basic physics encoding (\(3n^2 = 30,000\) biconditionals for \(n = 100\)) is well within the capacity of modern SAT solvers, which routinely handle millions of clauses. However, richer constraints like “exactly one damaged floor” add \(O(n^4) \approx 50\) million clauses, which is feasible but pushing practical limits. Adding multiple such cardinality constraints rapidly becomes unwieldy.
 
-2. **What FOL restrictions improve tractability?**
-   - Function-free fragments
-   - Horn clauses / Datalog-style rules
-   - Finite domains with bounded or guarded quantification
-   - Stratified negation
+2. **FOL restrictions for tractability**: Unrestricted FOL is semi-decidable (and undecidable for satisfiability in general). Tractable restrictions include: (a) Horn clauses, which enable polynomial-time forward and backward chaining; (b) function-free FOL over finite domains, which is decidable; (c) description logics, which restrict quantifier patterns to guarantee decidability while retaining useful expressiveness; (d) bounded-variable fragments, which limit the number of variables.
 
-3. **How can a hybrid approach work?**
-   - Keep general domain knowledge in FOL as reusable templates.
-   - Ground only the relevant local region for a specific query.
-   - Solve the grounded part with SAT/SMT.
-   - Use efficient cardinality encodings (counters/sorting networks) for global constraints.
-
-In practice, this hybrid strategy gives both high expressiveness (from FOL) and scalable solving (from propositional methods).
+3. **Hybrid approach**: Use FOL for the general physics rules (3 quantified sentences, grid-size independent), and propositionalize only the local neighborhood around the agent’s current position for fast inference. For example, the agent could maintain a FOL KB for global constraints but ground the creaking/rumbling rules only for the squares within \(k\) steps of its current location. This combines FOL’s compact representation with propositional logic’s efficient (and decidable) inference.
